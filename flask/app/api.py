@@ -1,18 +1,14 @@
+from app import app
 from flask import Flask, request, Response
 import torch
 import rawpy
-from app import app
-from app.dataset import pack_raw
-from app.infer import inferTransform
-from app.model.model import UNet
+from src.model.model import UNet
+from app.utils import inferTransform
 import numpy as np
 from PIL import Image
 import boto3
 import io
 import os
-#import manhole
-
-#manhole.install(patch_fork=False, daemon_connection=True)
 
 # AWS Session
 session = boto3.Session(
@@ -21,7 +17,7 @@ session = boto3.Session(
     region_name = os.environ['AWS_REGION']
 )
 
-checkpoint_path = '../checkpoint/checkpoint.t7'
+checkpoint_path = 'checkpoint/checkpoint.t7'
 
 # Setting Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
