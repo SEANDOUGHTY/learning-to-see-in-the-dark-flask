@@ -11,7 +11,8 @@ services:
     expose:
       - 8080
     volumes: 
-      - ~/Desktop/learning-to-see-in-the-dark-pytorch/checkpoint:/checkpoint
+      - ~/Desktop/learning-to-see-in-the-dark-flask/checkpoint:/checkpoint
+      - ~/Desktop/learning-to-see-in-the-dark-flask/src:/app/src
     environment: 
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY

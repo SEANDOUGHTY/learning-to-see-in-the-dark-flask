@@ -17,7 +17,7 @@ session = boto3.Session(
     region_name = os.environ['AWS_REGION']
 )
 
-checkpoint_path = 'checkpoint/checkpoint.t7'
+checkpoint_path = '../checkpoint/checkpoint.t7'
 
 # Setting Device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
