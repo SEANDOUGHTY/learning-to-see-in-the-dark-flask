@@ -33,8 +33,7 @@ def upload():
         input_image = request.files['image']
         ratio = float(request.form["ratio"])
 
-        # if user does not select file, browser also
-        # submit an empty part without filename
+        # if user does not select file
         app.logger.info("checking image format")
         if input_image.filename == '':
             app.logger.error("No selected file")
@@ -82,9 +81,11 @@ def download():
             object.download_fileobj(image)
             image.seek(0)
         except:
-            logging.error("Unable to Download Input Image from S3")
+            logging.info("Image Not Ready")
+            if not check_instance():
+                launch_instance(session)
             return "Not ready", status.HTTP_404_NOT_FOUND
-        
-        
+              
+        return send_file(image, mimetype='image/png'), status.HTTP_200_OK
 
     return "Bad Request", status.HTTP_400_BAD_REQUEST

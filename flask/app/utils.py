@@ -46,6 +46,10 @@ def check_instance():
             'Name': 'subnet-id',
             'Values': ['subnet-0d6e5384d0fb5b377']
         },
+        {
+            'Name': 'instance-state-name',
+            'Values': ['pending', 'running']
+        }
     ],
     MaxResults=5
 )
@@ -61,14 +65,14 @@ def launch_instance(session):
     instance = ec2.create_instances(
     MaxCount=1,
     MinCount=1,
-    ImageId='ami-0bb076c2ffb475769',
+    ImageId='ami-03ba6b1cc8dbf7a93',
     InstanceType='t2.medium',
     SecurityGroupIds=['sg-077764cc5a36ca83b'],
     SubnetId='subnet-0d6e5384d0fb5b377',
     InstanceInitiatedShutdownBehavior='terminate',
     LaunchTemplate={
         'LaunchTemplateName': 'learningtoseeinthedark',
-        'Version': '1'
+        'Version': '5'
     },
     InstanceMarketOptions={
         'MarketType': 'spot',
