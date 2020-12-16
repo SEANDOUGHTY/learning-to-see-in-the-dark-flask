@@ -3,34 +3,107 @@ import cv2
 import math
 import numpy as np
 from PIL import Image
+import boto3
+import logging
 
-def importImage(im, ratio):
-    app.logger.debug("Converting image to Numpy Array")
-    im = np.asarray(Image.open(im))
-            
-    app.logger.debug("Scaling and removing black levels")
-    im = np.maximum(im - 0.0, 0) / (255.0 - 0.0)  # subtract the black level
+def allowed_file(filename, extensions):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in extensions
 
-    app.logger.debug("Cast to Float32")
-    im = im.astype(np.float32)
 
-    im *= ratio    
-    return im
+def predict(image, ratio):        
+    im = importImage(image, ratio)
+    
+    app.logger.info("Transforming Image")
+    im = inferTransform(im)
+    
+    app.logger.info("Loading Input Image to %s" % device)
+    tensor = torch.from_numpy(im).transpose(0, 2).unsqueeze(0)
+    tensor = tensor.to(device)
 
-def inferTransform(im):
-    # scaling image down to a max dimension of 512, maintaining aspect ratio
-    app.logger.info("Imported image is: %d X %d" % (im.shape[0], im.shape[1]))
-    if max(im.shape) > 512:
-        scale_factor = 512 / max(im.shape)
-        H = int(im.shape[0] * scale_factor)
-        W = int(im.shape[1] * scale_factor)
-        app.logger.info("Rescaling image to: %d X %d" % (H, W))
-        im = cv2.resize(im, (W,H), cv2.INTER_AREA)
+    with torch.no_grad():    
+        # Inference
+        app.logger.info("Performing Inference on Input Image")
+        try:
+            output = model(tensor)
+        except:
+            app.logger.error("Inference Failed")
+            return "Image Inference failed"
+        
+        # Post processing for RGB output
+        output = output.to('cpu').numpy() * 255
+        output = output.squeeze()
+        output = np.transpose(output, (2, 1, 0)).astype('uint8')
+        output = Image.fromarray(output).convert("RGB")
 
-    # cropping image to nearest 16, to allow torch to compute
-    app.logger.debug("Trimming image to size")
-    H = math.floor(im.shape[0]/16.0)*16
-    W = math.floor(im.shape[1]/16.0)*16
-    im = im[:H, :W, :]
+    return output
 
-    return im
+def check_instance():
+    client = boto3.client('ec2')
+    response = client.describe_instances(
+    Filters=[
+        {
+            'Name': 'subnet-id',
+            'Values': ['subnet-0d6e5384d0fb5b377']
+        },
+        {
+            'Name': 'instance-state-name',
+            'Values': ['pending', 'running']
+        }
+    ],
+    MaxResults=5
+)
+    logging.info("Located %d instances" % len(response["Reservations"]))
+
+    if len(response["Reservations"]) >= 1:
+        return True
+    else: return False
+
+def launch_instance(session):
+    ec2 = session.resource('ec2')
+    logging.info("Launching 1 EC2 instance")
+    instance = ec2.create_instances(
+    MaxCount=1,
+    MinCount=1,
+    ImageId='ami-03ba6b1cc8dbf7a93',
+    InstanceType='t2.medium',
+    SecurityGroupIds=['sg-077764cc5a36ca83b'],
+    SubnetId='subnet-0d6e5384d0fb5b377',
+    InstanceInitiatedShutdownBehavior='terminate',
+    LaunchTemplate={
+        'LaunchTemplateName': 'learningtoseeinthedark',
+        'Version': '5'
+    },
+    InstanceMarketOptions={
+        'MarketType': 'spot',
+        'SpotOptions': {}
+    },
+    TagSpecifications=[{
+        'ResourceType': 'instance',
+        'Tags': [{
+            'Key': 'name', 
+            'Value': 'learningtoseeinthedark'
+        }]
+        }]
+)
+
+def add_queue(fileName, ratio):
+    sqs = boto3.client('sqs')
+    logging.info("Adding job to SQS")
+    queue_url = 'https://sqs.us-east-1.amazonaws.com/195691282245/learningtoseeinthedark'
+    response = sqs.send_message(
+    QueueUrl=queue_url,
+    MessageAttributes={
+        'Title': {
+            'DataType': 'String',
+            'StringValue': 'NewTask'
+        },
+        'Author': {
+            'DataType': 'String',
+            'StringValue': 'Sean Doughty'
+        },
+    },
+    MessageBody=('%s, %d' % (fileName, ratio))
+)
+    return (response['MessageId'])
+
