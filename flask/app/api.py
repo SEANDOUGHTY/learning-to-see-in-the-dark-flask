@@ -1,14 +1,16 @@
 from app import app
-from flask import Flask, request, Response
-import torch
-import rawpy
-from src.model.model import UNet
-from app.utils import inferTransform, importImage
-import numpy as np
+from flask import Flask, request, Response, send_file
+from flask_api import status
+import requests
+from app.utils import *
 from PIL import Image
 import boto3
 import io
 import os
+import time
+
+# Allowed image inputs
+ALLOWED_EXTENSIONS = {'png'}
 
 # AWS Session Setup
 app.logger.info("Creating AWS Session")
@@ -21,90 +23,68 @@ try:
 except:
     app.logger.error("AWS Session Failed: Check Access Key and Permissions")
 
-# Setting Device
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') 
-app.logger.info("Set torch device as: %s" % device)
-
-# Load model
-app.logger.info ("Loading UNet Model to %s"% device)
-try:
-    checkpoint_path = 'checkpoint/checkpoint.t7'
-    model = UNet().to(device)
-    model.load_state_dict(torch.load(checkpoint_path, map_location=device)["state_dict"])
-except:
-    app.logger.error("Model Unsuccessfully Loaded")
-
-
-#set model to evaluate mode
-model.eval()
-
-@app.route('/', methods=['POST'])
-def predict():
+@app.route('/upload', methods=['POST'])
+def upload():
     if request.method == 'POST':
-        # Retrieving Data from POST request
-        data = request.get_json()
-        bucketName = data['Bucket']
-        inputImage = data['input-image']
-        outputImage = data['output-image']
-        ratio = int(data['ratio'])
+        app.logger.info("Image upload recieved")
+        if 'image' not in request.files:
+            app.logger.error("No image attached")
+            return "No image attached", status.HTTP_400_BAD_REQUEST
+        input_image = request.files['image']
+        ratio = float(request.form["ratio"])
+
+        # if user does not select file, browser also
+        # submit an empty part without filename
+        app.logger.info("checking image format")
+        if input_image.filename == '':
+            app.logger.error("No selected file")
+            return "No selected file", status.HTTP_400_BAD_REQUEST
+        if input_image and allowed_file(input_image.filename, ALLOWED_EXTENSIONS):
+            filename = "input_%d" % time.time()
+        else:
+            app.logger.error("Invalid file type")
+            return "Invalid file type", status.HTTP_400_BAD_REQUEST
         
-        app.logger.info("POST Request Recieved; inputImage: %s, outputImage: %s, ratio %d" % (inputImage, outputImage, ratio))
+        app.logger.info("Uploading image to S3")
+        s3 = session.resource('s3')
+        bucketName = "pyseedarkresources"
+        try:
+            s3.Bucket(bucketName).put_object(
+                Key="inputs/%s" % filename,
+                Body=input_image,
+                ContentType='image/png',
+            )
+        except:
+            app.logger.error("Failed to Upload Image")
+            return "Failed to Upload Image", status.HTTP_400_BAD_REQUEST
+
+        add_queue(filename, ratio)
+        if not check_instance():
+            launch_instance(session)
         
-        app.logger.info("Downloading Input Image from S3")
+        return 'output_' + filename[6:], status.HTTP_200_OK
+    
+    return "Bad Request", status.HTTP_400_BAD_REQUEST
+       
+@app.route('/download', methods=['GET'])
+def download():
+    if request.method == 'GET':
+        fileName = 'outputs/' + request.args['fileName']
+        app.logger.info("Recieved Download Request for %s" % fileName)
+
+        s3 = session.resource('s3')
+        bucketName = "pyseedarkresources"
         try:
             s3 = session.resource('s3')
-            object = s3.Object(bucketName, inputImage)
+            object = s3.Object(bucketName, fileName)
             
             image = io.BytesIO()
             object.download_fileobj(image)
             image.seek(0)
         except:
-            app.logger.error("Unable to Download Input Image from S3")
-            return "Unable to Download Input Image from S3"
-
-        app.logger.info("Importing Image from: %s" % inputImage)
-        im = importImage(image, ratio)
+            logging.error("Unable to Download Input Image from S3")
+            return "Not ready", status.HTTP_404_NOT_FOUND
         
-        app.logger.info("Transforming Image")
-        im = inferTransform(im)
         
-        app.logger.info("Loading Input Image to %s" % device)
-        tensor = torch.from_numpy(im).transpose(0, 2).unsqueeze(0)
-        tensor = tensor.to(device)
 
-        with torch.no_grad():    
-            # Inference
-            app.logger.info("Performing Inference on Input Image")
-            try:
-                output = model(tensor)
-            except:
-                app.logger.error("Inference Failed")
-                return "Image Inference failed"
-            
-            # Post processing for RGB output
-            output = output.to('cpu').numpy() * 255
-            output = output.squeeze()
-            output = np.transpose(output, (2, 1, 0)).astype('uint8')
-            output = Image.fromarray(output).convert("RGB")
-            #output.show()
-
-            # Output buffer for upload to S3
-            buffer = io.BytesIO()            
-            output.save(buffer, "PNG")
-            buffer.seek(0) # rewind pointer back to start
-
-            app.logger.info("Uploading Image to %s", outputImage)
-            try:
-                s3.Bucket(bucketName).put_object(
-                    Key=outputImage,
-                    Body=buffer,
-                    ContentType='image/png',
-                )
-            except:
-                app.logger.error("Failed to Upload Image")
-                return "Failed to Upload Image"
-
-            
-        app.logger.info("Post Request Complete")
-        return "Upload to S3 Complete"
-        
+    return "Bad Request", status.HTTP_400_BAD_REQUEST
