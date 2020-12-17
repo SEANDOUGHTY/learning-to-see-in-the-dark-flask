@@ -31,6 +31,6 @@ services:
   branch: master                                      # optional (uses repo default)
   healthCheckPath: /
   envVars:
-  -key: PORT
-  value: 80
+  - key: PORT
+    value: 80
   
