@@ -20,17 +20,3 @@ services:
     sync: false
   - key: PORT
     value: 8080
-
-- type: web
-  name: nginx
-  env: docker
-  dockerfilePath: ./nginx/Dockerfile 
-  dockerContext: ./nginx
-  region: oregon                                      # optional (defaults to oregon)
-  plan: standard                                      # optional
-  branch: master                                      # optional (uses repo default)
-  healthCheckPath: /
-  envVars:
-  -key: PORT
-  value: 80
-  
