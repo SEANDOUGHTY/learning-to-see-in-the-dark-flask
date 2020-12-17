@@ -3,6 +3,8 @@ services:
 - type: web
   name: flask
   env: docker
+  dockerfilePath: ./flask/Dockerfile 
+  dockerContext: ./flask
   region: oregon                                      # optional (defaults to oregon)
   plan: standard                                      # optional
   branch: master                                      # optional (uses repo default)
@@ -22,6 +24,8 @@ services:
 - type: web
   name: nginx
   env: docker
+  dockerfilePath: ./nginx/Dockerfile 
+  dockerContext: ./nginx
   region: oregon                                      # optional (defaults to oregon)
   plan: standard                                      # optional
   branch: master                                      # optional (uses repo default)
