@@ -8,11 +8,10 @@ services:
     restart: always
     environment:
       - APP_NAME=MyFlaskApp
-    expose:
-      - 8080
-    volumes: 
-      - ~/Desktop/learning-to-see-in-the-dark-flask/checkpoint:/checkpoint
+    volumes:
       - ~/Desktop/learning-to-see-in-the-dark-flask/src:/app/src
+    expose:
+      - 8080 
     environment: 
       - AWS_ACCESS_KEY_ID
       - AWS_SECRET_ACCESS_KEY

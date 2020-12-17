@@ -13,17 +13,10 @@ dictConfig({
             'formatter': 'default',
             'stream': 'ext://flask.logging.wsgi_errors_stream'
         },
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'formatter': 'default',
-            'filename': 'logging/app.log',
-            'maxBytes': 1024
-        }
     },
     'root': {
             'level': 'INFO',
-            'handlers': ['wsgi', 'file']
+            'handlers': ['wsgi']
     }
 })
 

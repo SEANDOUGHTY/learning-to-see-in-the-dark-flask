@@ -1,9 +1,9 @@
 numpy
 pillow
-matplotlib
 flask
+Flask-API
+requests
 opencv-python
-rawpy
 boto3
 
 

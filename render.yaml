@@ -1,0 +1,32 @@
+services:
+# A Docker web service
+- type: web
+  name: flask
+  env: docker
+  region: oregon                                      # optional (defaults to oregon)
+  plan: standard                                      # optional
+  branch: master                                      # optional (uses repo default)
+  healthCheckPath: /
+  envVars:
+  - key: APP_NAME
+    value: MyFlaskApp
+  - key: AWS_ACCESS_KEY_ID
+    sync: false
+  - key: AWS_SECRET_ACCESS_KEY
+    sync: false
+  - key: AWS_REGION
+    sync: false
+  - key: PORT
+    value: 8080
+
+- type: web
+  name: nginx
+  env: docker
+  region: oregon                                      # optional (defaults to oregon)
+  plan: standard                                      # optional
+  branch: master                                      # optional (uses repo default)
+  healthCheckPath: /
+  envVars:
+  -key: PORT
+  value: 80
+  
