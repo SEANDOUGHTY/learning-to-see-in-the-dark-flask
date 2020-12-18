@@ -8,7 +8,6 @@ services:
   region: oregon                                      # optional (defaults to oregon)
   plan: standard                                      # optional
   branch: master                                      # optional (uses repo default)
-  healthCheckPath: /
   envVars:
   - key: APP_NAME
     value: MyFlaskApp
