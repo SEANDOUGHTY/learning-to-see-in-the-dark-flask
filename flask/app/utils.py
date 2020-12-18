@@ -91,7 +91,8 @@ def launch_instance(session):
 )
 
 def add_queue(fileName, ratio):
-    sqs = boto3.client('sqs')
+    sqs = boto3.client('sqs',
+        region_name = os.environ['AWS_REGION'])
     logging.info("Adding job to SQS")
     queue_url = 'https://sqs.us-east-1.amazonaws.com/195691282245/learningtoseeinthedark'
     response = sqs.send_message(
