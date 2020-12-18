@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 import boto3
 import logging
+import os
 
 def allowed_file(filename, extensions):
     return '.' in filename and \
@@ -39,7 +40,9 @@ def predict(image, ratio):
     return output
 
 def check_instance():
-    client = boto3.client('ec2')
+    logging.info("Checking for EC2 instances")
+    client = boto3.client('ec2',
+        region_name = os.environ['AWS_REGION'])
     response = client.describe_instances(
     Filters=[
         {

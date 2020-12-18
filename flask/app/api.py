@@ -23,6 +23,8 @@ try:
 except:
     app.logger.error("AWS Session Failed: Check Access Key and Permissions")
 
+app.logger.info("Server Ready")
+
 @app.route('/upload', methods=['POST'])
 def upload():
     if request.method == 'POST':
@@ -45,9 +47,10 @@ def upload():
             return "Invalid file type", status.HTTP_400_BAD_REQUEST
         
         app.logger.info("Uploading image to S3")
-        s3 = session.resource('s3')
         bucketName = "pyseedarkresources"
+
         try:
+            s3 = session.resource('s3')
             s3.Bucket(bucketName).put_object(
                 Key="inputs/%s" % filename,
                 Body=input_image,
@@ -71,7 +74,6 @@ def download():
         fileName = 'outputs/' + request.args['fileName']
         app.logger.info("Recieved Download Request for %s" % fileName)
 
-        s3 = session.resource('s3')
         bucketName = "pyseedarkresources"
         try:
             s3 = session.resource('s3')
