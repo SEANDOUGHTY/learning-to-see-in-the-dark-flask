@@ -2,6 +2,7 @@ numpy
 pillow
 flask
 Flask-API
+flask_cors
 requests
 opencv-python
 boto3
