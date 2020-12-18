@@ -25,6 +25,11 @@ except:
 
 app.logger.info("Server Ready")
 
+@app.route('/', methods=['GET'])
+def health_check():
+    app.logger.info("Performing health check")
+    return "Server Healthy", status.HTTP_200_OK
+
 @app.route('/upload', methods=['POST'])
 def upload():
     if request.method == 'POST':
