@@ -74,8 +74,7 @@ def launch_instance(session):
     SubnetId='subnet-0d6e5384d0fb5b377',
     InstanceInitiatedShutdownBehavior='terminate',
     LaunchTemplate={
-        'LaunchTemplateName': 'learningtoseeinthedark',
-        'Version': '6'
+        'LaunchTemplateName': 'learningtoseeinthedark'
     },
     InstanceMarketOptions={
         'MarketType': 'spot',
