@@ -68,7 +68,7 @@ def launch_instance(session):
     instance = ec2.create_instances(
     MaxCount=1,
     MinCount=1,
-    ImageId='ami-03ba6b1cc8dbf7a93',
+    ImageId='ami-0051594ccd2535c9f',
     InstanceType='t2.medium',
     SecurityGroupIds=['sg-077764cc5a36ca83b'],
     SubnetId='subnet-0d6e5384d0fb5b377',
