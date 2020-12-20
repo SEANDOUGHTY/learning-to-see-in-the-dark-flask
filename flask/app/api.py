@@ -96,3 +96,13 @@ def download():
         return send_file(image, mimetype='image/png'), status.HTTP_200_OK
 
     return "Bad Request", status.HTTP_400_BAD_REQUEST
+
+@app.route('/checkinstance', methods=['GET'])    
+def checkinstance():
+    if request.method == 'GET':
+        if not check_instance():
+            launch_instance(session)
+            return "Launching Instance", status.HTTP_200_OK
+        return  "Instance running", status.HTTP_200_OK
+
+    return "Bad Request", status.HTTP_400_BAD_REQUEST
