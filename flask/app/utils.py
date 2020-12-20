@@ -75,7 +75,7 @@ def launch_instance(session):
     InstanceInitiatedShutdownBehavior='terminate',
     LaunchTemplate={
         'LaunchTemplateName': 'learningtoseeinthedark',
-        'Version': '5'
+        'Version': '6'
     },
     InstanceMarketOptions={
         'MarketType': 'spot',
