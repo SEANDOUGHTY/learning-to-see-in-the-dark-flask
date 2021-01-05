@@ -101,7 +101,7 @@ def download():
             if (SESSIONS[request.remote_addr]["last_request"] - time.time()) > 600:
                 return "Time out", status.HTTP_408_REQUEST_TIMEOUT
         else:
-            return "Invalid IP Address", status.HTTP_400_NOT_FOUND
+            return "Invalid IP Address", status.HTTP_400_BAD_REQUEST
 
         fileName = 'outputs/' + request.args['fileName']
         app.logger.info("Recieved Download Request for %s" % fileName)
