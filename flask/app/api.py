@@ -11,6 +11,8 @@ import time
 
 # Allowed image inputs
 ALLOWED_EXTENSIONS = {'png'}
+SESSIONS = {}
+LIMIT = 5
 
 # AWS Session Setup
 app.logger.info("Creating AWS Session")
@@ -33,6 +35,24 @@ def health_check():
 @app.route('/upload', methods=['POST'])
 def upload():
     if request.method == 'POST':
+        app.logger.info(SESSIONS)
+        if request.remote_addr in SESSIONS:
+            if (SESSIONS[request.remote_addr]["first_request"] - time.time()) > 3600:
+                # Reset limit
+                SESSIONS[request.remote_addr]["first_request"] = time.time()
+                SESSIONS[request.remote_addr]["last_request"] = time.time()
+                SESSIONS[request.remote_addr]["requests"] = 1
+            elif SESSIONS[request.remote_addr]["requests"] >= 5:
+                    return "Too many requests", status.HTTP_429_TOO_MANY_REQUESTS
+            else:
+                SESSIONS[request.remote_addr]["requests"] += 1
+                SESSIONS[request.remote_addr]["last_request"] = time.time()
+        else:
+            SESSIONS[request.remote_addr] = {}
+            SESSIONS[request.remote_addr]["first_request"] = time.time()
+            SESSIONS[request.remote_addr]["last_request"] = time.time()
+            SESSIONS[request.remote_addr]["requests"] = 1
+    
         app.logger.info("Image upload recieved")
         if 'image' not in request.files:
             app.logger.error("No image attached")
@@ -76,6 +96,13 @@ def upload():
 @app.route('/download', methods=['GET'])
 def download():
     if request.method == 'GET':
+        app.logger.info(SESSIONS)
+        if request.remote_addr in SESSIONS:
+            if (SESSIONS[request.remote_addr]["last_request"] - time.time()) > 600:
+                return "Time out", status.HTTP_408_REQUEST_TIMEOUT
+        else:
+            return "Invalid IP Address", status.HTTP_400_NOT_FOUND
+
         fileName = 'outputs/' + request.args['fileName']
         app.logger.info("Recieved Download Request for %s" % fileName)
 
