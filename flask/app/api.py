@@ -36,22 +36,22 @@ def health_check():
 def upload():
     if request.method == 'POST':
         app.logger.info(SESSIONS)
-        if request.remote_addr in SESSIONS:
-            if (SESSIONS[request.remote_addr]["first_request"] - time.time()) > 3600:
+        if request.environ['REMOTE_ADDR'] in SESSIONS:
+            if (SESSIONS[request.environ['REMOTE_ADDR']]["first_request"] - time.time()) > 3600:
                 # Reset limit
-                SESSIONS[request.remote_addr]["first_request"] = time.time()
-                SESSIONS[request.remote_addr]["last_request"] = time.time()
-                SESSIONS[request.remote_addr]["requests"] = 1
-            elif SESSIONS[request.remote_addr]["requests"] >= 5:
+                SESSIONS[request.environ['REMOTE_ADDR']]["first_request"] = time.time()
+                SESSIONS[request.environ['REMOTE_ADDR']]["last_request"] = time.time()
+                SESSIONS[request.environ['REMOTE_ADDR']]["requests"] = 1
+            elif SESSIONS[request.environ['REMOTE_ADDR']]["requests"] >= 5:
                     return "Too many requests", status.HTTP_429_TOO_MANY_REQUESTS
             else:
-                SESSIONS[request.remote_addr]["requests"] += 1
-                SESSIONS[request.remote_addr]["last_request"] = time.time()
+                SESSIONS[request.environ['REMOTE_ADDR']]["requests"] += 1
+                SESSIONS[request.environ['REMOTE_ADDR']]["last_request"] = time.time()
         else:
-            SESSIONS[request.remote_addr] = {}
-            SESSIONS[request.remote_addr]["first_request"] = time.time()
-            SESSIONS[request.remote_addr]["last_request"] = time.time()
-            SESSIONS[request.remote_addr]["requests"] = 1
+            SESSIONS[request.environ['REMOTE_ADDR']] = {}
+            SESSIONS[request.environ['REMOTE_ADDR']]["first_request"] = time.time()
+            SESSIONS[request.environ['REMOTE_ADDR']]["last_request"] = time.time()
+            SESSIONS[request.environ['REMOTE_ADDR']]["requests"] = 1
     
         app.logger.info("Image upload recieved")
         if 'image' not in request.files:
@@ -97,8 +97,8 @@ def upload():
 def download():
     if request.method == 'GET':
         app.logger.info(SESSIONS)
-        if request.remote_addr in SESSIONS:
-            if (SESSIONS[request.remote_addr]["last_request"] - time.time()) > 600:
+        if request.environ['REMOTE_ADDR'] in SESSIONS:
+            if (SESSIONS[request.environ['REMOTE_ADDR']]["last_request"] - time.time()) > 600:
                 return "Time out", status.HTTP_408_REQUEST_TIMEOUT
         else:
             return "Invalid IP Address", status.HTTP_400_BAD_REQUEST
