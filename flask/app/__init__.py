@@ -22,5 +22,6 @@ dictConfig({
 })
 
 app = Flask(__name__)
-CORS(app)
+# CORS(app)
+cors = CORS(app, resources={r"/*": {"origins": "*"}})
 from app import api

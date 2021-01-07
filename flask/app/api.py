@@ -1,5 +1,5 @@
 from app import app
-from flask import Flask, request, Response, send_file
+from flask import Flask, request, Response, send_file, make_response
 from flask_api import status
 import requests
 from app.utils import *
@@ -8,11 +8,12 @@ import boto3
 import io
 import os
 import time
+from flask_cors import CORS, cross_origin
 
 # Allowed image inputs
 ALLOWED_EXTENSIONS = {'png'}
-SESSIONS = {}
-LIMIT = 5
+LIMIT = 5 # max number of requests
+RESET = 3600 # reset frequency in seconds
 
 # AWS Session Setup
 app.logger.info("Creating AWS Session")
@@ -33,26 +34,21 @@ def health_check():
     return "Server Healthy", status.HTTP_200_OK
 
 @app.route('/upload', methods=['POST'])
+@cross_origin(supports_credentials=True)
 def upload():
     if request.method == 'POST':
-        app.logger.info(SESSIONS)
-        if request.environ['REMOTE_ADDR'] in SESSIONS:
-            if (SESSIONS[request.environ['REMOTE_ADDR']]["first_request"] - time.time()) > 3600:
-                # Reset limit
-                SESSIONS[request.environ['REMOTE_ADDR']]["first_request"] = time.time()
-                SESSIONS[request.environ['REMOTE_ADDR']]["last_request"] = time.time()
-                SESSIONS[request.environ['REMOTE_ADDR']]["requests"] = 1
-            elif SESSIONS[request.environ['REMOTE_ADDR']]["requests"] >= 5:
-                    return "Too many requests", status.HTTP_429_TOO_MANY_REQUESTS
-            else:
-                SESSIONS[request.environ['REMOTE_ADDR']]["requests"] += 1
-                SESSIONS[request.environ['REMOTE_ADDR']]["last_request"] = time.time()
+        if not request.cookies.get('requests'):
+            num_requests = 0
         else:
-            SESSIONS[request.environ['REMOTE_ADDR']] = {}
-            SESSIONS[request.environ['REMOTE_ADDR']]["first_request"] = time.time()
-            SESSIONS[request.environ['REMOTE_ADDR']]["last_request"] = time.time()
-            SESSIONS[request.environ['REMOTE_ADDR']]["requests"] = 1
-    
+            num_requests = int(request.cookies.get('requests'))
+            if num_requests >= 5:
+                last_reset = float(request.cookies.get('last_reset'))
+                if (time.time()-last_reset) > RESET:
+                    num_requests = 0
+                else:
+                    return "Too many requests", status.HTTP_429_TOO_MANY_REQUESTS
+
+        app.logger.info(num_requests)
         app.logger.info("Image upload recieved")
         if 'image' not in request.files:
             app.logger.error("No image attached")
@@ -89,19 +85,18 @@ def upload():
         if not check_instance():
             launch_instance(session)
         
-        return 'output_' + filename[6:], status.HTTP_200_OK
+        res = make_response(str('output_' + filename[6:]))
+        res.set_cookie('requests', str(num_requests+1))
+        if num_requests == 0:
+            res.set_cookie('last_reset', str(time.time()))
+        return res, status.HTTP_200_OK
     
     return "Bad Request", status.HTTP_400_BAD_REQUEST
        
 @app.route('/download', methods=['GET'])
+@cross_origin()
 def download():
     if request.method == 'GET':
-        app.logger.info(SESSIONS)
-        if request.environ['REMOTE_ADDR'] in SESSIONS:
-            if (SESSIONS[request.environ['REMOTE_ADDR']]["last_request"] - time.time()) > 600:
-                return "Time out", status.HTTP_408_REQUEST_TIMEOUT
-        else:
-            return "Invalid IP Address", status.HTTP_400_BAD_REQUEST
 
         fileName = 'outputs/' + request.args['fileName']
         app.logger.info("Recieved Download Request for %s" % fileName)
@@ -125,6 +120,7 @@ def download():
     return "Bad Request", status.HTTP_400_BAD_REQUEST
 
 @app.route('/checkinstance', methods=['GET'])    
+@cross_origin()
 def checkinstance():
     if request.method == 'GET':
         if not check_instance():
@@ -133,3 +129,11 @@ def checkinstance():
         return  "Instance running", status.HTTP_200_OK
 
     return "Bad Request", status.HTTP_400_BAD_REQUEST
+
+@app.route('/debug', methods=['GET'])
+def debug():
+    if request.method == 'GET':
+        res = make_response('output_222')
+        res.set_cookie('requests', '1')
+        res.set_cookie('last_reset', str(time.time()))
+        return res, status.HTTP_200_OK
