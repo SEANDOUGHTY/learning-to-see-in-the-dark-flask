@@ -38,14 +38,18 @@ def health_check():
 def upload():
     if request.method == 'POST':
         if not request.cookies.get('requests'):
+            app.logger.info("Request from new user set requests to 0")
             num_requests = 0
         else:
             num_requests = int(request.cookies.get('requests'))
+            app.logger.info("Request from existing user with %d" % num_requests)
             if num_requests >= 5:
                 last_reset = float(request.cookies.get('last_reset'))
                 if (time.time()-last_reset) > RESET:
+                    app.logger.info("Reseting user quota to 0")
                     num_requests = 0
                 else:
+                    app.logger.info("User has too many requests declined")
                     return "Too many requests", status.HTTP_429_TOO_MANY_REQUESTS
 
         app.logger.info(num_requests)
@@ -105,7 +109,6 @@ def download():
         try:
             s3 = session.resource('s3')
             object = s3.Object(bucketName, fileName)
-            
             image = io.BytesIO()
             object.download_fileobj(image)
             image.seek(0)
