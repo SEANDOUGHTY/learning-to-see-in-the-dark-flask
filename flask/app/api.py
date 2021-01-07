@@ -86,9 +86,9 @@ def upload():
             launch_instance(session)
         
         res = make_response(str('output_' + filename[6:]))
-        res.set_cookie('requests', str(num_requests+1))
+        res.set_cookie('requests', str(num_requests+1), secure=True, samesite='None')
         if num_requests == 0:
-            res.set_cookie('last_reset', str(time.time()))
+            res.set_cookie('last_reset', str(time.time()), secure=True, samesite='None')
         return res, status.HTTP_200_OK
     
     return "Bad Request", status.HTTP_400_BAD_REQUEST
