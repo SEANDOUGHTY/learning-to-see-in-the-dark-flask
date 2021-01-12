@@ -44,15 +44,9 @@ def upload():
             num_requests = int(request.cookies.get('requests'))
             app.logger.info("Request from existing user with %d" % num_requests)
             if num_requests >= 5:
-                last_reset = float(request.cookies.get('last_reset'))
-                if (time.time()-last_reset) > RESET:
-                    app.logger.info("Reseting user quota to 0")
-                    num_requests = 0
-                else:
-                    app.logger.info("User has too many requests declined")
-                    return "Too many requests", status.HTTP_429_TOO_MANY_REQUESTS
+                app.logger.info("User has too many requests declined")
+                return "Too many requests", status.HTTP_429_TOO_MANY_REQUESTS
 
-        app.logger.info(num_requests)
         app.logger.info("Image upload recieved")
         if 'image' not in request.files:
             app.logger.error("No image attached")
@@ -90,9 +84,7 @@ def upload():
             launch_instance(session)
         
         res = make_response(str('output_' + filename[6:]))
-        res.set_cookie('requests', str(num_requests+1), secure=True, samesite='None')
-        if num_requests == 0:
-            res.set_cookie('last_reset', str(time.time()), secure=True, samesite='None')
+        res.set_cookie('requests', str(num_requests+1), secure=True, max_age=3600, samesite='None')
         return res, status.HTTP_200_OK
     
     return "Bad Request", status.HTTP_400_BAD_REQUEST
